@@ -24,7 +24,7 @@ from sklearn.preprocessing import (OneHotEncoder, PolynomialFeatures,
                                    StandardScaler)
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
-from utils_dataprep import obtain_df 
+from utils_data import obtain_df 
 
 
 warnings.filterwarnings("ignore")
@@ -138,7 +138,7 @@ def train_single_gridsearch(classifier, grid_parameter, X_train, X_test, y_train
 
     # fit Logistic Regression
     classifier_name = str(classifier).replace("()", "")
-    title = f"\n\nTraining a GridSearchCV model with \n{classifier_name} predictor.."
+    title = f"\n\nTraining a GridSearchCV model with {classifier_name} predictor.."
     print(title)
     print(len(title) * "=")
     start = time.time()
@@ -224,13 +224,13 @@ def train_multiple_gridsearch(classifiers, grid_parameters, X_train, X_test, y_t
     best_accuracy = results_df.Accuracy.values[0]
     best_recall = results_df.Recall.values[0]
     output_path = f"../trained_models/results_df_{best_accuracy:.3f}_Acc_{best_recall:.3f}_Rec_{message}.pkl"
-    print(f"Pickling trained models dataframe at {output_path}")
+    print(f"Pickling trained models dataframe at {output_path}..\n")
     results_df.to_pickle(output_path)
     
     # print the results to the screen
     pd.set_option('display.width', 1000) 
     pd.set_option('display.max_columns', 20)
-    print(results_df)
+    print(results_df.drop(columns=["trained_model"]))
     
     return results_df
 

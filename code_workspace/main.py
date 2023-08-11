@@ -25,8 +25,8 @@ from sklearn.preprocessing import (OneHotEncoder, PolynomialFeatures,
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
-from utils_dataprep import *
-from utils_modeling import *
+from utils_data import *
+from utils_model import *
 
 warnings.filterwarnings("ignore")
 
