@@ -81,38 +81,12 @@ def get_classifiers_and_grid():
 
 
 if __name__ == "__main__":
-    df = obtain_df(use_saved_one=True)
-    unwanted_column_endings = ["_std"]
+
+    unwanted_column_endings = ["_std", "race"]
     # unwanted_column_endings = []
-    if unwanted_column_endings:
-        m = "no_cols"
-    else:
-        m = "_".join(unwanted_column_endings)
-    message = f"excluding_{m}"
 
-    selected_columns = select_columns(
-        df, unwanted_column_endings=unwanted_column_endings)
-
-    X = df[selected_columns]
-    y = df["Outcome 30 days Hospitalization"]
-
-    print(f"X's shape: {X.shape} - y's shape: {y.shape}")
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=0.30, random_state=42
-    )
-    num_cols, cat_cols = categorize_columns(X_train)
-
-    preprocessor = get_preprocessor(num_cols, cat_cols)
-
-    print(
-        f"\nThere are {len(cat_cols)} categorical columns and {len(num_cols)} numerical columns.\n")
-    print(
-        f"Before preprocessing.. X_train: {X_train.shape} - X_test: {X_test.shape}")
-    X_train = preprocessor.fit_transform(X_train)
-    X_test = preprocessor.transform(X_test)
-    print(
-        f"After preprocessing..  X_train: {X_train.shape} - X_test: {X_test.shape}")
+    X_train, X_test, y_train, y_test = split_and_preprocess_data(
+        unwanted_column_endings=[], test_size=0.30)
 
     clf1 = LogisticRegression()
     single_model_results(clf1, X_train, X_test, y_train, y_test)
@@ -120,5 +94,12 @@ if __name__ == "__main__":
     clf2 = RandomForestClassifier()
     single_model_results(clf2, X_train, X_test, y_train, y_test)
 
+    if unwanted_column_endings:
+        m = "no_cols"
+    else:
+        m = "_".join(unwanted_column_endings)
+    message = f"excluding_{m}"
+
     classifiers, grid_parameters = get_classifiers_and_grid()
-    results_df = train_multiple_gridsearch(classifiers, grid_parameters, X_train, X_test, y_train, y_test, message=message)
+    results_df = train_multiple_gridsearch(
+        classifiers, grid_parameters, X_train, X_test, y_train, y_test, message=message)

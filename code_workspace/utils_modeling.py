@@ -24,6 +24,8 @@ from sklearn.preprocessing import (OneHotEncoder, PolynomialFeatures,
                                    StandardScaler)
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+from utils_dataprep import obtain_df 
+
 
 warnings.filterwarnings("ignore")
 
@@ -106,7 +108,8 @@ def categorize_columns(X):
     return num_cols, cat_cols
 
 
-def split_and_preprocess_data(df, unwanted_column_endings=[], test_size=0.30 ):
+def split_and_preprocess_data(unwanted_column_endings=[], test_size=0.30 ):
+    df = obtain_df(use_saved_one=True)
     selected_columns = select_columns(df, unwanted_column_endings=unwanted_column_endings)
 
     X = df[selected_columns]
