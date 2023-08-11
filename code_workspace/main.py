@@ -85,7 +85,7 @@ if __name__ == "__main__":
     # unwanted_column_endings = []
 
     X_train, X_test, y_train, y_test = split_and_preprocess_data(
-        unwanted_column_endings=[], test_size=0.30)
+        unwanted_column_endings=unwanted_column_endings, test_size=0.30)
 
     clf1 = LogisticRegression()
     single_model_results(clf1, X_train, X_test, y_train, y_test)
