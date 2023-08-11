@@ -45,7 +45,6 @@ def get_classifiers_and_grid():
         [
             {
                 "max_iter": [250, 370, 540],
-                "penalty": ["l2", "none"],
             }
         ],
         [
