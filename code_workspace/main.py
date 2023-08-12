@@ -31,61 +31,13 @@ from utils_model import *
 warnings.filterwarnings("ignore")
 
 
-def get_classifiers_and_grid():
-    classifiers = {
-        "log": LogisticRegression(),
-        "rf": RandomForestClassifier(),
-        "dt": DecisionTreeClassifier(),
-        "nn": MLPClassifier(),
-        "gnb": GaussianNB(),
-        "quad": QuadraticDiscriminantAnalysis(),
-    }
-
-    grid_parameters = [
-        [
-            {
-                "max_iter": [250, 370, 540],
-            }
-        ],
-        [
-            {
-                "max_depth": [35, 25, 15, None],
-                "n_estimators": [121, 151, 171, 251],
-            }
-        ],
-        [
-            {
-                "max_depth": [20, 50, 100, None],
-                "criterion": ["gini", "entropy", "log_loss"],
-            }
-        ],
-        [
-            {
-                "hidden_layer_sizes": [[20, 20, 10], [20, 10], [20, 20]],
-                "alpha": [0.0003, 0.03],
-            }
-        ],
-        [
-            {
-                "var_smoothing": [1e-9],
-            },
-        ],
-        [
-            {
-                "reg_param": [0.0],
-            },
-        ],
-    ]
-    return classifiers, grid_parameters
-
-
 if __name__ == "__main__":
 
     unwanted_column_endings = ["_std", "race"]
     # unwanted_column_endings = []
-
+    use_saved_one = False 
     X_train, X_test, y_train, y_test = split_and_preprocess_data(
-        unwanted_column_endings=unwanted_column_endings, test_size=0.30)
+        use_saved_one=use_saved_one, unwanted_column_endings=unwanted_column_endings, test_size=0.30)
 
     clf1 = LogisticRegression()
     single_model_results(clf1, X_train, X_test, y_train, y_test)
@@ -99,6 +51,6 @@ if __name__ == "__main__":
         m = "_".join(unwanted_column_endings)
     message = f"excluding_{m}"
 
-    classifiers, grid_parameters = get_classifiers_and_grid()
-    results_df = train_multiple_gridsearch(
-        classifiers, grid_parameters, X_train, X_test, y_train, y_test, message=message)
+    # classifiers, grid_parameters = get_classifiers_and_grid()
+    # results_df = train_multiple_gridsearch(
+    #     classifiers, grid_parameters, X_train, X_test, y_train, y_test, message=message)

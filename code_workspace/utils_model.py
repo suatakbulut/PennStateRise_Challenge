@@ -108,8 +108,8 @@ def categorize_columns(X):
     return num_cols, cat_cols
 
 
-def split_and_preprocess_data(unwanted_column_endings=[], test_size=0.30 ):
-    df = obtain_df(use_saved_one=True)
+def split_and_preprocess_data(use_saved_one=True, unwanted_column_endings=[], test_size=0.30 ):
+    df = obtain_df(use_saved_one=use_saved_one)
     selected_columns = select_columns(df, unwanted_column_endings=unwanted_column_endings)
 
     X = df[selected_columns]
@@ -234,3 +234,50 @@ def train_multiple_gridsearch(classifiers, grid_parameters, X_train, X_test, y_t
     
     return results_df
 
+
+def get_classifiers_and_grid():
+    classifiers = {
+        "log": LogisticRegression(),
+        "rf": RandomForestClassifier(),
+        "dt": DecisionTreeClassifier(),
+        "nn": MLPClassifier(),
+        "gnb": GaussianNB(),
+        "quad": QuadraticDiscriminantAnalysis(),
+    }
+
+    grid_parameters = [
+        [
+            {
+                "max_iter": [250, 370, 540],
+            }
+        ],
+        [
+            {
+                "max_depth": [35, 25, 15, None],
+                "n_estimators": [121, 151, 171, 251],
+            }
+        ],
+        [
+            {
+                "max_depth": [20, 50, 100, None],
+                "criterion": ["gini", "entropy", "log_loss"],
+            }
+        ],
+        [
+            {
+                "hidden_layer_sizes": [[20, 20, 10], [20, 10], [20, 20]],
+                "alpha": [0.0003, 0.03],
+            }
+        ],
+        [
+            {
+                "var_smoothing": [1e-9],
+            },
+        ],
+        [
+            {
+                "reg_param": [0.0],
+            },
+        ],
+    ]
+    return classifiers, grid_parameters

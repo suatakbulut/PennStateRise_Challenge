@@ -255,7 +255,7 @@ def prepare_data():
 
 
 def obtain_df(use_saved_one=True):
-    print("\n\n\n")
+    print("\nDATA PREP\n")
     processed_data_path = get_processed_data_path()
     processed_file_path = processed_data_path.split("/")[-1]
 
@@ -267,11 +267,11 @@ def obtain_df(use_saved_one=True):
             print("Processed data does not exist. Creating one.")
             df = prepare_data()
             print(f"Processed data is created and saved at {processed_data_path}..")
-            df.to_csv(processed_data_path)
+            df.to_csv(processed_data_path, index=False)
     else:
         df = prepare_data()
         print(f"Processed data is created and saved at {processed_data_path}..")
-        df.to_csv(processed_data_path)
+        df.to_csv(processed_data_path, index=False)
 
     return df
 
