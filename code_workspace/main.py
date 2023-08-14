@@ -1,56 +1,46 @@
-import ast
-import os
-import time
+import argparse
 import warnings
 
-import matplotlib.pyplot as plt
-import numpy as np
-import pandas as pd
-from sklearn.compose import ColumnTransformer
-from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from sklearn.ensemble import (AdaBoostClassifier, IsolationForest,
-                              RandomForestClassifier)
-from sklearn.gaussian_process import GaussianProcessClassifier
-from sklearn.impute import SimpleImputer
-from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import (accuracy_score, f1_score, make_scorer,
-                             precision_score, recall_score, roc_auc_score)
-from sklearn.model_selection import GridSearchCV, train_test_split
-from sklearn.naive_bayes import GaussianNB
-from sklearn.neighbors import KNeighborsClassifier
-from sklearn.neural_network import MLPClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import (OneHotEncoder, PolynomialFeatures,
-                                   StandardScaler)
-from sklearn.svm import SVC
-from sklearn.tree import DecisionTreeClassifier
-
+from data_prep import prepare_train_test_split
 from utils_data import *
 from utils_model import *
 
 warnings.filterwarnings("ignore")
 
 
+parser = argparse.ArgumentParser(description='Details')
+parser.add_argument('--create_data', '-cd', dest='create_data',
+                    type=int, help='1 for recreating the dataset')
+parser.add_argument('--test_size',   '-ts', dest='test_size',
+                    type=float, help='test_size for train test split')
+args = parser.parse_args()
+
+if not args.create_data:
+    print("Data re-computation is not specified.. Checking if the data already exists..")
+    use_saved_one = True
+else:
+    use_saved_one = 1 - args.create_data
+
+
+if not args.test_size:
+    print("Test_size is not specified.. Employing 0.40")
+    test_size = 0.40
+else:
+    test_size = args.test_size
+
 if __name__ == "__main__":
+    # unwanted_column_endings = ["_std", "race"]
+    unwanted_column_endings = []
 
-    unwanted_column_endings = ["_std", "race"]
-    # unwanted_column_endings = []
-    use_saved_one = False 
-    X_train, X_test, y_train, y_test = split_and_preprocess_data(
-        use_saved_one=use_saved_one, unwanted_column_endings=unwanted_column_endings, test_size=0.30)
+    X_train, X_test, y_train, y_test = prepare_train_test_split(
+        use_saved_one=use_saved_one,
+        unwanted_column_endings=unwanted_column_endings,
+        test_size=test_size,
+    )
+    for predictor in ("logistic", "forest", "xgb"):
+        single_model_results(predictor, X_train, X_test, y_train, y_test)
 
-    clf1 = LogisticRegression()
-    single_model_results(clf1, X_train, X_test, y_train, y_test)
-
-    clf2 = RandomForestClassifier()
-    single_model_results(clf2, X_train, X_test, y_train, y_test)
-
-    if unwanted_column_endings:
-        m = "no_cols"
-    else:
-        m = "_".join(unwanted_column_endings)
-    message = f"excluding_{m}"
-
-    # classifiers, grid_parameters = get_classifiers_and_grid()
-    # results_df = train_multiple_gridsearch(
-    #     classifiers, grid_parameters, X_train, X_test, y_train, y_test, message=message)
+    results_df = train_multiple_gridsearch(
+        X_train, X_test, y_train, y_test,
+        message=message
+    )

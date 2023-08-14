@@ -1,15 +1,12 @@
-import ast
-import os
 import time
-import warnings
 
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
-from sklearn.compose import ColumnTransformer
+from sklearn.compose import (ColumnTransformer, make_column_selector,
+                             make_column_transformer)
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
-from sklearn.ensemble import (AdaBoostClassifier, IsolationForest,
-                              RandomForestClassifier)
+from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
 from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
@@ -19,67 +16,106 @@ from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.naive_bayes import GaussianNB
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
-from sklearn.pipeline import Pipeline
-from sklearn.preprocessing import (OneHotEncoder, PolynomialFeatures,
-                                   StandardScaler)
+from sklearn.pipeline import Pipeline, make_pipeline
+from sklearn.preprocessing import (MinMaxScaler, OneHotEncoder,
+                                   PolynomialFeatures, StandardScaler)
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
-from utils_data import obtain_df 
 
 
-warnings.filterwarnings("ignore")
+def get_preprocessor():
+    ## Even though there is no categorical column, putting one here
+    cat_selector = make_column_selector(dtype_include=object)
+    num_selector = make_column_selector(dtype_include=np.number)
 
-def get_preprocessor(num_cols, cat_cols):
-    # Preprocessing Numerical data
-    numerical_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="mean")),
-            ("scaler", StandardScaler()),
-            # ("poly", PolynomialFeatures())
-        ]
+    cat_processor = OneHotEncoder(handle_unknown="ignore", drop="if_binary")
+    num_processor = make_pipeline(
+        SimpleImputer(strategy="constant"),
+        StandardScaler(),
     )
 
-    # Preprocessing Categorical data
-    categorical_transformer = Pipeline(
-        steps=[
-            ("imputer", SimpleImputer(strategy="constant")),
-            ("onehot", OneHotEncoder(handle_unknown="ignore")),
-            # ("interaction", PolynomialFeatures(interaction_only=True))
-        ]
-    )
-
-
-    preprocessor = ColumnTransformer(
-        transformers=[
-            ("num", numerical_transformer, num_cols),
-            ("cat", categorical_transformer, cat_cols),
-        ]
+    preprocessor = make_column_transformer(
+        (num_processor, num_selector),
+        (cat_processor, cat_selector),
     )
 
     return preprocessor
 
 
-def single_model_results(clf, X_train, X_test, y_train, y_test):
+def get_predictor(pred, params=None):
+    predictors = _predictor_dict()
+    if pred in predictors:
+        predictor = predictors[pred]
+        if params:
+            predictor.set_params(**params)
+        return predictor
+    else:
+        raise ValueError(f"Available predictors are {list(predictors.keys())}..")
+
+
+def _predictor_dict():
+    predictors = {
+        "logistic": LogisticRegression(solver="sag", max_iter = 500),
+        "forest": RandomForestClassifier(),
+        "xgb": GradientBoostingClassifier(),
+        "gaussian": GaussianNB(),
+        "quad": QuadraticDiscriminantAnalysis(),
+        "decision_tree": DecisionTreeClassifier(),
+    }
+    return predictors
+
+
+def create_estimator_with(pred, params=None):
+    preprocessor = get_preprocessor()
+    predictor = get_predictor(pred, params=params) 
+    estimator = Pipeline(steps=[("preprocess", preprocessor), ("predictor", predictor)])
+    return estimator  
+
+
+def get_single_model_params(predictor):
+    if predictor in ("forest", "decision_tree") :
+        params = {
+            "max_depth": 25,
+            "n_estimators": 65,
+            "max_features": "sqrt",
+            "min_samples_split": 16,
+            "criterion": "gini",
+        } 
+    elif predictor == "xgb":
+        params = {
+            "max_features": "sqrt",
+            "min_samples_split": 16,
+        }
+    else:
+        params = None
+    return params 
+
+
+def single_model_results(predictor, X_train, X_test, y_train, y_test):
+    params = get_single_model_params(predictor)
+    clf = create_estimator_with(predictor, params = params)
     start = time.time()
     clf.fit(X_train, y_train)
     train_time = (time.time() - start) / 60
-
-    print(f"\nTraining with {clf} took {train_time:.2f} mins.")
+    classifier_name = str(clf.named_steps["predictor"]).split('(')[0]
+    print(f"\nTraining with {classifier_name} took {train_time:.2f} mins.")
 
     # Calculate metrics
-    clf_probs = clf.predict_proba(X_test)
-    auc_score = roc_auc_score(y_test, clf_probs[:, 1])
-    y_pred = clf.predict(X_test)
-    f_score = f1_score(y_test, y_pred)
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred)
-    recall = recall_score(y_test, y_pred)
+    auc_score, f_score, accuracy, precision, recall = calculate_metrics(
+        clf, X_test, y_test)
+    auc_score_tr, f_score_tr, accuracy_tr, precision_tr, recall_tr = calculate_metrics(
+        clf, X_train, y_train)
 
-    print(f"F1 Score  : {f_score:.4f}")
-    print(f"AUC Score : {auc_score:.4f}")
-    print(f"Accuracy  : {accuracy:.4f}")
-    print(f"Precision : {precision:.4f}")
-    print(f"Recall    : {recall:.4f}\n")
+    print("===========================")
+    print(f"{classifier_name}".center(27, " "))
+    print("===========================")
+    print("== Test Set vs Train Set ==")
+    print(f"F1 Score  : {f_score:.4f} | {f_score_tr:.4f}")
+    print(f"AUC Score : {auc_score:.4f} | {auc_score_tr:.4f}")
+    print(f"Accuracy  : {accuracy:.4f} | {accuracy_tr:.4f}")
+    print(f"Precision : {precision:.4f} | {precision_tr:.4f}")
+    print(f"Recall    : {recall:.4f} | {recall_tr:.4f}")
+    print("===========================\n")
 
 
 def select_columns(df, unwanted_column_endings=[]):
@@ -98,7 +134,8 @@ def select_columns(df, unwanted_column_endings=[]):
                 break
     print("Excluding the following columns..")
     print(unwanted_columns)
-    selected_columns = sorted(list(set(df.columns).difference(set(unwanted_columns))))
+    selected_columns = sorted(
+        list(set(df.columns).difference(set(unwanted_columns))))
     return selected_columns
 
 
@@ -108,36 +145,27 @@ def categorize_columns(X):
     return num_cols, cat_cols
 
 
-def split_and_preprocess_data(use_saved_one=True, unwanted_column_endings=[], test_size=0.30 ):
-    df = obtain_df(use_saved_one=use_saved_one)
-    selected_columns = select_columns(df, unwanted_column_endings=unwanted_column_endings)
-
-    X = df[selected_columns]
-    y = df["Outcome 30 days Hospitalization"]
-
-    print(f"X's shape: {X.shape} - y's shape: {y.shape}") 
-
-    X_train, X_test, y_train, y_test = train_test_split(
-        X, y, test_size=test_size, random_state=42
-    )
-    num_cols, cat_cols = categorize_columns(X_train)
-    preprocessor = get_preprocessor(num_cols, cat_cols)
-
-    print(f"\nThere are {len(cat_cols)} categorical columns and {len(num_cols)} numerical columns.\n")
-    print(f"Before preprocessing.. X_train: {X_train.shape} - X_test: {X_test.shape}")
-    X_train = preprocessor.fit_transform(X_train)
-    X_test = preprocessor.transform(X_test)
-    print(f"After preprocessing..  X_train: {X_train.shape} - X_test: {X_test.shape}")
-    return X_train, X_test, y_train, y_test
+def calculate_metrics(clf, X_test, y_test):
+    clf_probs = clf.predict_proba(X_test)
+    auc_score = roc_auc_score(y_test, clf_probs[:, 1])
+    y_pred = clf.predict(X_test)
+    f_score = f1_score(y_test, y_pred)
+    accuracy = accuracy_score(y_test, y_pred)
+    precision = precision_score(y_test, y_pred)
+    recall = recall_score(y_test, y_pred)
+    return auc_score, f_score, accuracy, precision, recall
 
 
-def train_single_gridsearch(classifier, grid_parameter, X_train, X_test, y_train, y_test):
+def train_single_gridsearch(predictor, grid_parameter, X_train, X_test, y_train, y_test):
     # run grid search to find best params
+    # scorer = make_scorer(roc_auc_score)
     scorer = make_scorer(recall_score)
-    clf = GridSearchCV(classifier, grid_parameter, cv=5, scoring=scorer, n_jobs=-1)
+    estimator = create_estimator_with(predictor)
+    clf = GridSearchCV(estimator, grid_parameter,
+                       cv=5, scoring=scorer, n_jobs=-1,)
 
     # fit Logistic Regression
-    classifier_name = str(classifier).replace("()", "")
+    classifier_name = str(estimator.named_steps["predictor"]).split('(')[0]
     title = f"\n\nTraining a GridSearchCV model with {classifier_name} predictor.."
     print(title)
     print(len(title) * "=")
@@ -146,31 +174,27 @@ def train_single_gridsearch(classifier, grid_parameter, X_train, X_test, y_train
     train_time = round((time.time() - start) / 60, 2)
     print(f"Fitting took {train_time} mins.")
 
-    # Generate predicted probabilites
-    start = time.time()
-    clf_probs = clf.predict_proba(X_test)
-    predict_time = round((time.time() - start) / 60, 2)
-    print(f"Prediction took {predict_time} mins.")
-
     # Calculate metrics
-    auc_score = roc_auc_score(y_test, clf_probs[:, 1])
-    y_pred = clf.predict(X_test)
-    f_score = f1_score(y_test, y_pred)
-    accuracy = accuracy_score(y_test, y_pred)
-    precision = precision_score(y_test, y_pred)
-    recall = recall_score(y_test, y_pred)
+    auc_score, f_score, accuracy, precision, recall = calculate_metrics(
+        clf, X_test, y_test)
+    auc_score_tr, f_score_tr, accuracy_tr, precision_tr, recall_tr = calculate_metrics(
+        clf, X_train, y_train)
 
-    print(f"F1 Score  : {f_score:.4f}")
-    print(f"AUC Score : {auc_score:.4f}")
-    print(f"Accuracy  : {accuracy:.4f}")
-    print(f"Precision : {precision:.4f}")
-    print(f"Recall    : {recall:.4f}\n\n")
+    print("===========================")
+    print(f"{classifier_name[:21]}".center(27, " "))
+    print("===========================")
+    print("== Test Set vs Train Set ==")
+    print(f"F1 Score  : {f_score:.4f} | {f_score_tr:.4f}")
+    print(f"AUC Score : {auc_score:.4f} | {auc_score_tr:.4f}")
+    print(f"Accuracy  : {accuracy:.4f} | {accuracy_tr:.4f}")
+    print(f"Precision : {precision:.4f} | {precision_tr:.4f}")
+    print(f"Recall    : {recall:.4f} | {recall_tr:.4f}")
+    print("===========================\n")
 
     return [
         classifier_name,
         clf,
         train_time,
-        predict_time,
         f_score,
         auc_score,
         accuracy,
@@ -179,13 +203,12 @@ def train_single_gridsearch(classifier, grid_parameter, X_train, X_test, y_train
     ]
 
 
-def train_multiple_gridsearch(classifiers, grid_parameters, X_train, X_test, y_train, y_test, message=""):
+def train_multiple_gridsearch(X_train, X_test, y_train, y_test):
     results_df = pd.DataFrame(
         columns=[
             "classifier_class",
             "trained_model",
             "train_time",
-            "predict_time",
             "F1_Score",
             "AUC",
             "Accuracy",
@@ -193,25 +216,23 @@ def train_multiple_gridsearch(classifiers, grid_parameters, X_train, X_test, y_t
             "Recall",
         ]
     )
-
-    for [test, classifier], grid_parameter in zip(classifiers.items(), grid_parameters):
+    grids_mapping = get_grids_mapping()
+    for predictor, grid_parameter in grids_mapping.items():
         [
             classifier_class,
             trained_model,
             train_time,
-            predict_time,
             f_score,
             auc_score,
             accuracy,
             precision,
             recall,
-        ] = train_single_gridsearch(classifier, grid_parameter, X_train, X_test, y_train, y_test)
+        ] = train_single_gridsearch(predictor, grid_parameter, X_train, X_test, y_train, y_test)
 
         results_df.loc[len(results_df)] = [
             classifier_class,
             trained_model,
             train_time,
-            predict_time,
             f_score,
             auc_score,
             accuracy,
@@ -220,64 +241,42 @@ def train_multiple_gridsearch(classifiers, grid_parameters, X_train, X_test, y_t
         ]
 
     results_df = results_df.sort_values(by="Recall", ascending=False)
-    
-    best_accuracy = results_df.Accuracy.values[0]
+
+    best_auc = results_df.AUC.values[0]
     best_recall = results_df.Recall.values[0]
-    output_path = f"../trained_models/results_df_{best_accuracy:.3f}_Acc_{best_recall:.3f}_Rec_{message}.pkl"
+    output_path = f"../trained_models/results_df_{best_auc:.2f}_AUC_{best_recall:.2f}_Rec.pkl"
     print(f"Pickling trained models dataframe at {output_path}..\n")
     results_df.to_pickle(output_path)
-    
+
     # print the results to the screen
-    pd.set_option('display.width', 1000) 
+    pd.set_option('display.width', 1000)
     pd.set_option('display.max_columns', 20)
     print(results_df.drop(columns=["trained_model"]))
-    
+
     return results_df
 
 
-def get_classifiers_and_grid():
-    classifiers = {
-        "log": LogisticRegression(),
-        "rf": RandomForestClassifier(),
-        "dt": DecisionTreeClassifier(),
-        "nn": MLPClassifier(),
-        "gnb": GaussianNB(),
-        "quad": QuadraticDiscriminantAnalysis(),
+def get_grids_mapping():
+    grids_mapping = {
+        "logistic": {"predictor__C": [1.0, 0.3, 0.01, 0.003, 0.001]},
+        "forest": {
+            "predictor__max_depth": [15, 10, None],
+            "predictor__n_estimators": [31, 51, 56, 61, 66, 71, 101],
+            "predictor__max_features": ["sqrt", "log2"],
+            "predictor__min_samples_split": [8, 16, 24, 32, 128],
+            "predictor__criterion": ["gini", "entropy", "log_loss"],
+        },
+        "xgb": {
+            "predictor__max_features": ["sqrt", "log2"],
+            "predictor__min_samples_split": [8, 16, 24, 32, 128],
+        },
+        "gaussian": {"predictor__var_smoothing": [1e-9, 1e-8]},
+        "quad": {"predictor__reg_param": [0.0, 0.1]},
+        "decision_tree": {
+            "predictor__max_depth": [25, 15, None],
+            "predictor__max_features": ["sqrt", "log2"],
+            "predictor__min_samples_split": [8, 16, 32, 128],
+            "predictor__criterion": ["gini", "entropy", "log_loss"],
+        },
     }
-
-    grid_parameters = [
-        [
-            {
-                "max_iter": [250, 370, 540],
-            }
-        ],
-        [
-            {
-                "max_depth": [35, 25, 15, None],
-                "n_estimators": [121, 151, 171, 251],
-            }
-        ],
-        [
-            {
-                "max_depth": [20, 50, 100, None],
-                "criterion": ["gini", "entropy", "log_loss"],
-            }
-        ],
-        [
-            {
-                "hidden_layer_sizes": [[20, 20, 10], [20, 10], [20, 20]],
-                "alpha": [0.0003, 0.03],
-            }
-        ],
-        [
-            {
-                "var_smoothing": [1e-9],
-            },
-        ],
-        [
-            {
-                "reg_param": [0.0],
-            },
-        ],
-    ]
-    return classifiers, grid_parameters
+    return grids_mapping
