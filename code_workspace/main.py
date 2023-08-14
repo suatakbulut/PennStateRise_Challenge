@@ -40,7 +40,4 @@ if __name__ == "__main__":
     for predictor in ("logistic", "forest", "xgb"):
         single_model_results(predictor, X_train, X_test, y_train, y_test)
 
-    results_df = train_multiple_gridsearch(
-        X_train, X_test, y_train, y_test,
-        message=message
-    )
+    results_df = train_multiple_gridsearch(X_train, X_test, y_train, y_test)
