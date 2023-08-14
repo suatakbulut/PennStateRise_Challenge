@@ -27,18 +27,31 @@ def feature_importance_top10(model, X_test, y_test):
     top10_feature_importance = feature_importance.sort_values(ascending=False)[:10]
     feature_importance_values = top10_feature_importance.values
     feature_importance_labels = top10_feature_importance.index
-    
-    std = np.std([tree.feature_importances_ for tree in predictor.estimators_], axis=0)
+
+    if isinstance(predictor.estimators_[0], np.ndarray):
+        std = np.std(
+            [tree[0].feature_importances_ for tree in predictor.estimators_], axis=0
+        )
+    else:
+        std = np.std(
+            [tree.feature_importances_ for tree in predictor.estimators_], axis=0
+        )
     feature_importance_std = pd.Series(std, index=X_test.columns)
-    top10_feature_importance_std = feature_importance_std.loc[feature_importance_labels]
+    top10_feature_importance_std = feature_importance_std.loc[
+        feature_importance_labels
+    ].values
 
     end = time.time()
-    elapsed_time = (end-start)/60
+    elapsed_time = (end - start) / 60
     print(f"Elapsed time to compute feature importances: {elapsed_time:.2f} mins")
-    return [feature_importance_values, top10_feature_importance_std, feature_importance_labels]
+    return [
+        feature_importance_values,
+        top10_feature_importance_std,
+        feature_importance_labels,
+    ]
 
 
-def plot_perm_and_feature_importances(model, X_test, y_test):
+def plot_perm_and_feature_importances(model, X_test, y_test, model_type):
     print("Calculating permutation importance. This could take a while..")
     perm_importance_values, perm_importance_labels = permutation_importance_top10(model, X_test, y_test)
     feature_importance_values, top10_feature_importance_std, feature_importance_labels = feature_importance_top10(model, X_test, y_test)
@@ -47,12 +60,14 @@ def plot_perm_and_feature_importances(model, X_test, y_test):
     sns.barplot(x=feature_importance_values, y=feature_importance_labels, ax=axes[0], yerr = top10_feature_importance_std)
     axes[0].set_title("Top 10 Feature Importance")
     axes[0].set_ylabel("Features")
+    axes[0].set_xlim([0, 0.25])
 
     axes[1].boxplot(perm_importance_values.T, vert=False, labels=perm_importance_labels)
     axes[1].set_title("Top 10 Permutation Importance")
+    axes[1].set_xlim([0, 0.025])
 
     fig.tight_layout()
-    fig_path = "../data/permutation_feature_importance.png"
+    fig_path = f"../data/{model_type}_permutation_feature_importance.png"
     plt.savefig(fig_path)
     print(f"Figure is saved at {fig_path}")
     return fig 
