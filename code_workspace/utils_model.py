@@ -1,25 +1,21 @@
 import time
 
-import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
 from sklearn.compose import (ColumnTransformer, make_column_selector,
                              make_column_transformer)
 from sklearn.discriminant_analysis import QuadraticDiscriminantAnalysis
 from sklearn.ensemble import GradientBoostingClassifier, RandomForestClassifier
-from sklearn.gaussian_process import GaussianProcessClassifier
 from sklearn.impute import SimpleImputer
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (accuracy_score, f1_score, make_scorer,
                              precision_score, recall_score, roc_auc_score)
 from sklearn.model_selection import GridSearchCV, train_test_split
 from sklearn.naive_bayes import GaussianNB
-from sklearn.neighbors import KNeighborsClassifier
 from sklearn.neural_network import MLPClassifier
 from sklearn.pipeline import Pipeline, make_pipeline
 from sklearn.preprocessing import (MinMaxScaler, OneHotEncoder,
                                    PolynomialFeatures, StandardScaler)
-from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 
 
