@@ -1,7 +1,7 @@
 from sklearn.model_selection import train_test_split
 
 from utils_data import *
-from utils_model import categorize_columns, get_preprocessor, select_columns
+from utils_model import get_preprocessor, select_columns
 
 
 def get_data(use_saved_one=True):
