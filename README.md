@@ -57,11 +57,11 @@ on the terminal. To recreate the features set -cd to 1, and to adjust the train 
 ## Post Analysis 
 Please refer to the jupyter notebooks inside the `test_notebooks` folder. Feature Importance analysis conducted on the best-performing model, `Random Forest Classifier`, looks like as follows:
 
-![feature_importance](https://github.com/suatakbulut/PennStateRise_Challenge/assets/59936993/8296afa7-8b55-4cc4-b01a-462eaa30d968)
+![feature_importance](https://github.com/suatakbulut/PennStateRise_Challenge/assets/59936993/b9758b59-2aea-45b6-8f5e-17b5aeae5c34)
 
 Focusing attention on only those 10 features and fitting a Logistic Regression shows the significance of those features as well.
 
-![logit_on_important_features](https://github.com/suatakbulut/PennStateRise_Challenge/assets/59936993/14c143fd-4267-4cc5-a3c2-657e5e1b0499)
+![logit_on_important_features](https://github.com/suatakbulut/PennStateRise_Challenge/assets/59936993/abbc73c3-f094-43d2-8315-962e689e7b06)
 
 Finally, re-trainin the best-performing model with the same parameters on these 10 features and comparing its results to the Logistic Regression's above is depicted below. 
 
