@@ -42,7 +42,7 @@ For each observation
   - and some interaction terms
 
 ## Training 
-Multiple classification predictors are considered and trained using GridsearchCV method. 
+Multiple classification predictors are considered and trained using GridsearchCV method. Predictor are bundled with preprocessors to create estimators, which aims to avoid information leakage between test train splits in the Cross Validation stage. 
 
 ![results_table](https://github.com/suatakbulut/PennStateRise_Challenge/assets/59936993/630e0a0a-1823-472b-bdfa-a06308e9951b)
 
