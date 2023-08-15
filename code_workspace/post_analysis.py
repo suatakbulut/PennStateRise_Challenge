@@ -60,22 +60,37 @@ def feature_importance_top10(model, X_test, y_test):
     ]
 
 
+def shorten_labels(importance_labels):
+    labels = []
+    for label in importance_labels:
+        if "_" in label:
+            first_half, second_half = label.split("_")
+            if len(first_half) > 25:
+                fh = "".join(
+                    [char for char in first_half if char.isupper()])
+                label = "_".join([fh, second_half])
+        labels.append(label)
+
+    return labels
+
+
 def plot_perm_and_feature_importances(model, X_test, y_test, model_type):
-    print("Calculating permutation importance. This could take a while..")
-    perm_importance_values, perm_importance_labels = permutation_importance_top10(
-        model, X_test, y_test)
     feature_importance_values, top10_feature_importance_std, feature_importance_labels = feature_importance_top10(
         model, X_test, y_test)
 
+    print("Calculating permutation importance. This could take a while..")
+    perm_importance_values, perm_importance_labels = permutation_importance_top10(
+        model, X_test, y_test)
+
     fig, axes = plt.subplots(1, 2, figsize=(16, 6))
-    sns.barplot(x=feature_importance_values, y=feature_importance_labels,
+    sns.barplot(x=feature_importance_values, y=shorten_labels(feature_importance_labels),
                 ax=axes[0], yerr=top10_feature_importance_std)
     axes[0].set_title("Top 10 Feature Importance")
     axes[0].set_ylabel("Features")
     axes[0].set_xlim([0, 0.25])
 
     axes[1].boxplot(perm_importance_values.T, vert=False,
-                    labels=perm_importance_labels)
+                    labels=shorten_labels(perm_importance_labels))
     axes[1].set_title("Top 10 Permutation Importance")
     axes[1].set_xlim([0, 0.025])
 
@@ -113,7 +128,7 @@ def print_logit_results(logit, X_train, X_test, y_train, y_test, imp_features):
     labels = ["const"]
     for label in imp_features:
         labels.append(label)
-    
+
     print(logit.summary(xname=labels))
 
     print("\n\n===========================")
