@@ -2,7 +2,6 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
 from sklearn.inspection import permutation_importance
-
 from utils_model import *
 
 
@@ -114,28 +113,9 @@ def calculate_stats_logit_metrics(logit, X_test, y_test):
 
 
 def print_logit_results(logit, X_train, X_test, y_train, y_test, imp_features):
-    auc_score, f_score, accuracy, precision, recall = calculate_stats_logit_metrics(
-        logit, X_test, y_test
-    )
-    (
-        auc_score_tr,
-        f_score_tr,
-        accuracy_tr,
-        precision_tr,
-        recall_tr,
-    ) = calculate_stats_logit_metrics(logit, X_train, y_train)
-
     labels = ["const"]
     for label in imp_features:
         labels.append(label)
+    labels = shorten_labels(labels)
 
     print(logit.summary(xname=labels))
-
-    print("\n\n===========================")
-    print("== Test Set vs Train Set ==")
-    print(f"AUC Score : {auc_score:.4f} | {auc_score_tr:.4f}")
-    print(f"Recall    : {recall:.4f} | {recall_tr:.4f}")
-    print(f"F1 Score  : {f_score:.4f} | {f_score_tr:.4f}")
-    print(f"Accuracy  : {accuracy:.4f} | {accuracy_tr:.4f}")
-    print(f"Precision : {precision:.4f} | {precision_tr:.4f}")
-    print("===========================\n")
