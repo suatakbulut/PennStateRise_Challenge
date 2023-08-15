@@ -1,7 +1,8 @@
 # PennStateRise_Challenge
 
+This repo aims to build a model to predict whether a patient will be hospitalized within 30 days of their index date. For privacy reasons, the data set is not presented here. Please make sure that the relative path of the data is `./data/dataset.csv` when running thie repo. 
 
-## Feature Engineering
+## Data Wrangling and Feature Engineering
 
 Using the patient’s medical history prior to their personal index date, a set of 26 features/covariates/predictors have been created. These features consist of:
 
