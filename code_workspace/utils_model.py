@@ -20,7 +20,8 @@ from sklearn.tree import DecisionTreeClassifier
 
 
 def get_preprocessor():
-    ## Even though there is no categorical column, putting one here
+    """Cretes and Returns a preprocessor that handles categorical and numeric columns only"""
+    # Even though there is no categorical column, putting one here
     cat_selector = make_column_selector(dtype_include=object)
     num_selector = make_column_selector(dtype_include=np.number)
 
@@ -39,6 +40,8 @@ def get_preprocessor():
 
 
 def get_predictor(pred, params=None):
+    '''Returns a sklearn predictor. If params is specified, then set the corresponding 
+    params in teh predictor first.'''
     predictors = _predictor_dict()
     if pred in predictors:
         predictor = predictors[pred]
@@ -46,12 +49,14 @@ def get_predictor(pred, params=None):
             predictor.set_params(**params)
         return predictor
     else:
-        raise ValueError(f"Available predictors are {list(predictors.keys())}..")
+        raise ValueError(
+            f"Available predictors are {list(predictors.keys())}..")
 
 
 def _predictor_dict():
+    '''Considering only these predictors'''
     predictors = {
-        "logistic": LogisticRegression(solver="sag", max_iter = 500),
+        "logistic": LogisticRegression(solver="sag", max_iter=500),
         "forest": RandomForestClassifier(),
         "xgb": GradientBoostingClassifier(),
         "gaussian": GaussianNB(),
@@ -62,21 +67,24 @@ def _predictor_dict():
 
 
 def create_estimator_with(pred, params=None):
+    '''Bundle a predictor with a fresh preprocessor to create an estimator and avoid leakage'''
     preprocessor = get_preprocessor()
-    predictor = get_predictor(pred, params=params) 
-    estimator = Pipeline(steps=[("preprocess", preprocessor), ("predictor", predictor)])
-    return estimator  
+    predictor = get_predictor(pred, params=params)
+    estimator = Pipeline(
+        steps=[("preprocess", preprocessor), ("predictor", predictor)])
+    return estimator
 
 
 def get_single_model_params(predictor):
-    if predictor in ("forest", "decision_tree") :
+    '''When calling a single model only case, use the following parameters'''
+    if predictor in ("forest", "decision_tree"):
         params = {
             "max_depth": 25,
             "n_estimators": 65,
             "max_features": "sqrt",
             "min_samples_split": 16,
             "criterion": "gini",
-        } 
+        }
     elif predictor == "xgb":
         params = {
             "max_features": "sqrt",
@@ -84,12 +92,22 @@ def get_single_model_params(predictor):
         }
     else:
         params = None
-    return params 
+    return params
 
 
 def single_model_results(predictor, X_train, X_test, y_train, y_test):
+    """Creates an estimator with a given predictor, trains it, and returns 
+    its performance on both train and test sets
+
+    Args:
+        predictor (string): Has to be in the keys of _predictor_dict()
+        X_train (pd.DataFrame): train set
+        X_test (pd.DataFrame): test set
+        y_train (pd.Series): train labels
+        y_test (pd.Series): test labels
+    """
     params = get_single_model_params(predictor)
-    clf = create_estimator_with(predictor, params = params)
+    clf = create_estimator_with(predictor, params=params)
     start = time.time()
     clf.fit(X_train, y_train)
     train_time = (time.time() - start) / 60
@@ -115,7 +133,8 @@ def single_model_results(predictor, X_train, X_test, y_train, y_test):
 
 
 def select_columns(df, unwanted_column_endings=[]):
-
+    '''Excludes some columsn from our features. Exludes columns if they end 
+    with the suffix specified in unwanted_column_endings'''
     unwanted_columns = [
         "patient_id",
         "Outcome 30 days Hospitalization",
@@ -135,12 +154,6 @@ def select_columns(df, unwanted_column_endings=[]):
     return selected_columns
 
 
-def categorize_columns(X):
-    num_cols = [col for col in X.columns if X[col].dtype in ["int64", "float"]]
-    cat_cols = [col for col in X.columns if X[col].dtype == "object"]
-    return num_cols, cat_cols
-
-
 def calculate_metrics(clf, X_test, y_test):
     clf_probs = clf.predict_proba(X_test)
     auc_score = roc_auc_score(y_test, clf_probs[:, 1])
@@ -153,6 +166,20 @@ def calculate_metrics(clf, X_test, y_test):
 
 
 def train_single_gridsearch(predictor, grid_parameter, X_train, X_test, y_train, y_test):
+    """Train a gridsearch cv model by creating an estimator with the specified predcitor. 
+    Return the precitor's name, trained model, training time, and its performance
+
+    Args:
+        predictor (string): Has to be in the keys of _predictor_dict()
+        grid_parameter (_type_): grid on which to optimize the estimator
+        X_train (pd.DataFrame): train set
+        X_test (pd.DataFrame): test set
+        y_train (pd.Series): train labels
+        y_test (pd.Series): test labels
+
+    Returns:
+        list: _description_
+    """
     # run grid search to find best params
     # scorer = make_scorer(roc_auc_score)
     scorer = make_scorer(recall_score)
@@ -200,6 +227,19 @@ def train_single_gridsearch(predictor, grid_parameter, X_train, X_test, y_train,
 
 
 def train_multiple_gridsearch(X_train, X_test, y_train, y_test):
+    """Train multiple gridsearch cv models by creating estimators with all possible predictors. 
+    Store the precitor's name, trained model, training time, and its performance in a pd.DataFrame, 
+    saves, prints, and returns it
+
+    Args:
+        X_train (pd.DataFrame): train set
+        X_test (pd.DataFrame): test set
+        y_train (pd.Series): train labels
+        y_test (pd.Series): test labels
+
+    Returns:
+        list: _description_
+    """
     results_df = pd.DataFrame(
         columns=[
             "classifier_class",
@@ -253,6 +293,7 @@ def train_multiple_gridsearch(X_train, X_test, y_train, y_test):
 
 
 def get_grids_mapping():
+    '''Grid Parameters to consider for different predictors'''
     grids_mapping = {
         "logistic": {"predictor__C": [1.0, 0.3, 0.01, 0.003, 0.001]},
         "forest": {

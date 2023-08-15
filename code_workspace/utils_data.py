@@ -12,6 +12,15 @@ warnings.filterwarnings("ignore")
 
 
 def calculate_bmi_helper(weights, heights):
+    """Calculates average bmi, ist std, and its trend's slop across the acquired dates
+
+    Args:
+        weights (_type_): a list of (date, weight) list
+        heights (_type_): a list of (date, height) list
+
+    Returns:
+        list: average bmi, its std, as well as its trend
+    """
     weights_dict = {date: weight for date, weight in weights}
     heights_dict = {date: height for date, height in heights}
 
@@ -43,7 +52,14 @@ def calculate_bmi_helper(weights, heights):
 
 
 def calculate_bmi(row):
-    """bmi_avg, bmi_std, bmi_trend_slope"""
+    """Returns bmi_avg, bmi_std, bmi_trend_slope for a given row
+
+    Args:
+        row (pd.DateFrame row / dictionary): 
+
+    Returns:
+        list: average bmi, its std, as well as its trend
+    """
     weights = ast.literal_eval(row["Weight(lbs)"])
     heights = ast.literal_eval(row["Height(in)"])
     if not weights or not heights:
@@ -53,6 +69,7 @@ def calculate_bmi(row):
 
 
 def get_bmi(df):
+    '''Augment the pd.DataFrame with 3 new columns: "bmi_avg", "bmi_std", "bmi_trend_slope"'''
     df[["bmi_avg", "bmi_std", "bmi_trend_slope"]] = pd.DataFrame(
         df.apply(calculate_bmi, axis=1).tolist(), index=df.index
     )
@@ -60,6 +77,14 @@ def get_bmi(df):
 
 
 def clean_weight_helper(weights):
+    """Calculates average weight, ist std, and its trend's slop across the acquired dates
+
+    Args:
+        weights (_type_): a list of (date, weight) list
+
+    Returns:
+        list: average weight, its std, as well as its trend
+    """
     weights_dict = {date: weight for date, weight in weights}
     sorted_dates = []
     sorted_weights = []
@@ -81,7 +106,14 @@ def clean_weight_helper(weights):
 
 
 def clean_weight(row):
-    """weight_avg, weight_std, weight_trend_slope"""
+    """Returns weight_avg, weight_std, weight_trend_slope for a given row
+
+    Args:
+        row (pd.DateFrame row / dictionary): 
+
+    Returns:
+        list: average weight, its std, as well as its trend
+    """
     weights = ast.literal_eval(row["Weight(lbs)"])
     if not weights:
         return [np.nan, np.nan, np.nan]
@@ -90,6 +122,7 @@ def clean_weight(row):
 
 
 def get_weight(df):
+    '''Augment the pd.DataFrame with 3 new columns: "weight_avg", "weight_std", "weight_trend_slope"'''
     df[["weight_avg", "weight_std", "weight_trend_slope"]] = pd.DataFrame(
         df.apply(clean_weight, axis=1).tolist(), index=df.index
     )
@@ -125,7 +158,7 @@ def get_date_value_columns():
 
 
 def date_column_helper(row, column):
-    """_isPresent"""
+    '''whether a feature is present (2), or not (1), or we don't have information on it(0)'''
     if row[column] == "0":
         return 0
     else:
@@ -136,7 +169,8 @@ def date_column_helper(row, column):
 
 
 def clean_date_columns(df):
-    """_isPresent"""
+    '''For each column, determine whether a feature is present (2), or not (1), 
+    or we don't have information on it(0)'''
     date_columns = get_date_columns()
 
     for col in date_columns:
@@ -148,7 +182,8 @@ def clean_date_columns(df):
 
 
 def date_value_column_helper(row, column):
-    """daily_total_value_avg, daily_total_value_std, daily_total_value_trend_slope"""
+    '''For a given column in a row, expected to be a list of date value pairs, return the 
+    daily total values, their std, and trend across time'''
     if row[column] == "0":
         return [np.nan, np.nan, np.nan]
     else:
@@ -191,7 +226,9 @@ def date_value_column_helper(row, column):
 
 
 def clean_date_value_columns(df):
-    """3 columns"""
+    '''For all the columns that are a list of date value pairs, create three new columsn: 
+    daily total values, their std, and trend across time and drop the original one'''
+
     date_value_columns = get_date_value_columns()
     for col in date_value_columns:
         df[
@@ -215,6 +252,14 @@ def clean_date_value_columns(df):
 
 
 def get_all_dates_info_helper(row):
+    """Returns the number of unique days at which row has some information along with their range
+
+    Args:
+        row (pd.DataFrame row / dictionary):
+
+    Returns:
+        list: number of unique days for which the row has information, and their range
+    """
     all_dates = np.array([])
     for col in get_date_value_columns():
         if row[col] not in ("0", 0):
@@ -248,10 +293,9 @@ def get_all_dates_info_helper(row):
 
 
 def get_all_dates_info(df):
-    # df[["dates_count", "dates_nunique", "dates_range", "dates_freq"]] = pd.DataFrame(
-    #     df.apply(lambda row: get_all_dates_info_helper(row), axis=1).tolist(),
-    #     index=df.index,
-    # )
+    '''
+    dates_nunique: For how many unique days the observation has data
+    dates_range: The range of these days'''
     df[["dates_nunique", "dates_range"]] = pd.DataFrame(
         df.apply(lambda row: get_all_dates_info_helper(row), axis=1).tolist(),
         index=df.index,
@@ -260,6 +304,7 @@ def get_all_dates_info(df):
 
 
 def get_dummies(df):
+    '''Create female, black, and senior dummies since they are expected to be at high risk group'''
     df["is_female"] = pd.get_dummies(df["birth_gender"])["F"].astype(int)
     # one hot encode first for testing only
     df = pd.concat(
@@ -270,13 +315,16 @@ def get_dummies(df):
         ],
         axis=1,
     )
-    df["is_black"] = pd.get_dummies(df["race"])["Black or African American"].astype(int)
+    df["is_black"] = pd.get_dummies(
+        df["race"])["Black or African American"].astype(int)
     df["is_senior"] = (df["age"] >= 75).astype(int)
-    df.drop(columns=["ethnicity", "Unknown", "race", "birth_gender"], inplace=True)
+    df.drop(columns=["ethnicity", "Unknown",
+            "race", "birth_gender"], inplace=True)
     return df
 
 
 def get_num_isPresents(df):
+    '''Return the count of features that are present for an observation'''
     isPresent_cols = get_date_columns() + get_date_value_columns()
     all_isPresents = [df[f"{col}_isPresent"] == 2 for col in isPresent_cols]
     df["num_isPresents"] = sum(all_isPresents)
@@ -284,6 +332,7 @@ def get_num_isPresents(df):
 
 
 def include_interaction_terms(df):
+    '''Create some interaction terms'''
     columns = get_date_columns() + get_date_value_columns()
     for col in columns:
         df[f"black_{col}_isPresent"] = df["is_black"] * df[f"{col}_isPresent"]
@@ -313,6 +362,7 @@ def get_processed_data_path():
 
 
 def prepare_data():
+    '''Read the original data, clean its columns and create new features and return it'''
     data_path = get_original_data_path()
     df = pd.read_csv(data_path)
 

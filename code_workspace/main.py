@@ -7,7 +7,7 @@ from utils_model import *
 
 warnings.filterwarnings("ignore")
 
-
+# Utilize Command Line Arguments when deciding on new data creation and test data size
 parser = argparse.ArgumentParser(description='Details')
 parser.add_argument('--create_data', '-cd', dest='create_data',
                     type=int, help='1 for recreating the dataset')
@@ -37,7 +37,9 @@ if __name__ == "__main__":
         unwanted_column_endings=unwanted_column_endings,
         test_size=test_size,
     )
+    # Check a few simple model results
     for predictor in ("logistic", "forest", "xgb"):
         single_model_results(predictor, X_train, X_test, y_train, y_test)
 
+    # Run multiple gridsearchcv models and save them
     results_df = train_multiple_gridsearch(X_train, X_test, y_train, y_test)

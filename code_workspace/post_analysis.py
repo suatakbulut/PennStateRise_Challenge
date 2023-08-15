@@ -2,10 +2,21 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 import statsmodels.api as sm
 from sklearn.inspection import permutation_importance
+
 from utils_model import *
 
 
 def permutation_importance_top10(model, X_test, y_test):
+    """Computes permutation importances
+
+    Args:
+        model (sklearn predictor): It has to be a fitted model
+        X_test (pd.DataFrame): test data
+        y_test (pd.DataFrame): test labels
+
+    Returns:
+        list: permutation importances and their names for 10 most important features
+    """
     start = time.time()
     result = permutation_importance(
         model, X_test, y_test, n_repeats=20, random_state=0, n_jobs=-1)
@@ -26,6 +37,16 @@ def permutation_importance_top10(model, X_test, y_test):
 
 
 def feature_importance_top10(model, X_test, y_test):
+    """Computes feature importances
+
+    Args:
+        model (sklearn predictor): It has to be a fitted model
+        X_test (pd.DataFrame): test data
+        y_test (pd.DataFrame): test labels
+
+    Returns:
+        list: feature importances, their standard deviations, and their names for 10 most important features
+    """
     start = time.time()
     predictor = model.named_steps["predictor"]
     feature_importance = pd.Series(
@@ -60,6 +81,14 @@ def feature_importance_top10(model, X_test, y_test):
 
 
 def shorten_labels(importance_labels):
+    """Shorten the long elements with a '_'
+
+    Args:
+        importance_labels (list): A list of labels
+
+    Returns:
+        list: the same list with shortened elements
+    """
     labels = []
     for label in importance_labels:
         if "_" in label:
@@ -74,6 +103,17 @@ def shorten_labels(importance_labels):
 
 
 def plot_perm_and_feature_importances(model, X_test, y_test, model_type):
+    """Plots 10 most important features based on permutation and feature importance analysis
+
+    Args:
+        model (sklearn predictor): It has to be a fitted model. For now, RandomForest or XGB only
+        X_test (pd.DataFrame): test data
+        y_test (pd.DataFrame): test labels
+        model_type (_type_): to utilize in the title of the figure
+
+    Returns:
+        plt.fig: figure
+    """
     feature_importance_values, top10_feature_importance_std, feature_importance_labels = feature_importance_top10(
         model, X_test, y_test)
 
@@ -101,6 +141,16 @@ def plot_perm_and_feature_importances(model, X_test, y_test, model_type):
 
 
 def calculate_stats_logit_metrics(logit, X_test, y_test):
+    """Computes and Returns some metrics for a given logit model. A constant is added to the features as well
+
+    Args:
+        logit (stats api model): A fitted logistic regression instance of a stats api.
+        X_test (pd.DataFrame): test data
+        y_test (pd.DataFrame): test labels
+
+    Returns:
+        _type_: _description_
+    """
     yhat = logit.predict(sm.add_constant(X_test))
     y_pred = list(map(round, yhat))
 
@@ -113,6 +163,7 @@ def calculate_stats_logit_metrics(logit, X_test, y_test):
 
 
 def print_logit_results(logit, X_train, X_test, y_train, y_test, imp_features):
+    '''Prints a summary table for the logistic analysis on the important features'''
     labels = ["const"]
     for label in imp_features:
         labels.append(label)
